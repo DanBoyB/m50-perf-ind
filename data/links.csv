@@ -1,0 +1,21 @@
+Section,Sec,siteID,linkID,lengthKm,tolerance,direction
+N2 to Ballymun,N2 - BMN,1501,77,5.6781301,0.093786351,Northbound
+N3 to N2,N3 - N2,1502,66,4.2971702,0.133469602,Northbound
+N4 to N3,N4 - N3,1508,21,3.3047299,0.101484208,Northbound
+N7 to N4,N7 - N4,1503,19,4.56988,0.141822695,Northbound
+N81 to N7,N81 - N7,15041509,100,2.61427,0.114384496,Northbound
+Firhouse to N81,FIR - N81,1505,52,1.5488,0.058341163,Northbound
+Ballinteer to Firhouse,BAL - FIR,15061507,97,5.91293,0.254709686,Northbound
+Carrickmines to Ballinteer,CAR - BAL,15010,70,3.5006599,0.089049949,Northbound
+Cherrywood to Carrickmines,CHE - CAR,15011,79,2.2383201,0.074001892,Northbound
+N11 to Cherrywood,N11 - CHE,15012,94,2.0908501,0.121158374,Northbound
+M1 to Ballymun,M1 - BMN,1501,76,5.6781301,0.084257313,Southbound
+N2 to N3,N2 - N3,1502,61,4.2971702,0.132923416,Southbound
+N3 to N4,N3 - N4,1508,86,3.3047299,0.113009712,Southbound
+N4 to N7,N4 - N7,1503,17,4.56988,0.137499815,Southbound
+N7 to N81,N7 - N81,15041509,63,2.61427,0.110471722,Southbound
+N81 to Firhouse,N81 - FIR,1505,58,1.5488,0.080312228,Southbound
+Firhouse to Ballinteer,FIR - BAL,15061507,57,5.91293,0.156067319,Southbound
+Ballinteer to Carrickmines,BAL - CAR,15010,91,3.5006599,0.150049649,Southbound
+Carrickmines to Cherrywood,CAR - CHE,15011,69,2.2383201,0.094326012,Southbound
+Cherrywood to N11,CHE - N11,15012,53,2.0908501,0.118126083,Southbound

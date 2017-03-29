@@ -1,0 +1,99 @@
+---
+title: "Processing M50 JTMS data"
+author: "Dan Brennan"
+date: "09 March 2017"
+output: github_document
+---
+
+This note outlines the process and code used to read the M50 JTMS data into a database and output journey time values to be used for the calculation of performance indicators. 
+
+```{r, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(lubridate)
+```
+
+The path to where the journey time data is defined and a connection to the M50 sqlite database is opened. The JTMS links associated with the M50, in each direction are also defined.
+
+```{r}
+direct <- "/var/datastore/2015/JTMS"
+db <- src_sqlite("/var/datastore/SQLite/M50.sqlite", create = FALSE)
+
+linksSB <- c(76, 61, 86, 17, 63, 58, 57, 91, 69, 53)
+linksNB <- c(77, 66, 21, 19, 100, 52, 97, 70, 79, 94)
+```
+
+A function is created to iteratively read each JTMS csv file and load into a new table in the SQLite database.
+
+```{r}
+csv2SQLite <- function(path) {
+    setwd(path)
+    files <- list.files(pattern = "*.csv")
+    names <- c("linkID", "UTC", "n", "outliers", "sum", "sumSquared")
+
+    lapply(files, function(i) {
+        a <- read_csv(i, col_names = names, skip = 1) %>%
+            db_insert_into(con = db$con, table = "journeyTimes", values = .)
+        
+        rm(a)
+        gc()
+        })
+}
+```
+
+In order to filter by UNIX timestamps in SQLite, a function is defined to list the timestamps of the start and end of each year between 2013 and 2016.
+
+```{r}
+createUnixCal <- function(year) {
+    unixCal <- tibble(year = year, start = 0, end = 0) %>%
+        mutate(start = as.POSIXct(paste(year, "-01-01 00:00:00", sep = "")),
+               end = as.POSIXct(paste(year, "-12-31 23:59:59", sep = "")),
+               startUnix = unclass(start),
+               endUnix = unclass(end)) %>% 
+        select(year, startUnix, endUnix)
+}
+```
+
+Finally, a function is defined to split the journey times into seperate tables in the database for each year and for each direction. It also calculates the journey times in minutes
+
+```{r}
+filterJT <- function(year, links, direction = c("SB", "NB")) {
+    
+    unix <- createUnixCal(year)
+    
+    tbl(db, "journeyTimes") %>%
+        filter(linkID %in% links) %>% 
+        mutate(UTC = UTC / 1000) %>% 
+        filter(UTC >= unix[[2]], UTC <= unix[[3]]) %>%
+        collect(n = Inf) %>% 
+        mutate(journeyTime = ifelse(n == 0, 0, ((sum/1000)/n)/60)) %>% 
+        db_insert_into(con = db$con, table = paste("journeyTimes" , unix[[1]], 
+                                                   direction, sep = "_"), values = .)
+        }
+```
+
+Running the csv2SQLite function loads all JTMS data into the database
+
+```{r, eval = FALSE}
+csv2SQLite(direct)
+```
+
+```{r}
+tbl(db, "journeyTimes") %>% 
+    glimpse(width = 100)
+```
+
+Running the filterJT function splits the data into seperate tables.
+
+```{r, eval = FALSE}
+lapply((2013:2016), filterJT, linksSB, "SB")
+lapply((2013:2016), filterJT, linksNB, "NB")
+```
+
+```{r}
+tbl(db, "journeyTimes_2015_NB") %>% 
+    glimpse(width = 100)
+```
+

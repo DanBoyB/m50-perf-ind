@@ -1,0 +1,162 @@
+---
+title: "Calculating Percentage Stable Flow"
+author: "Dan Brennan"
+date: "21 March 2017"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(purrr)
+library(lubridate)
+```
+
+This note outlines the process to calculate the percentage stable flow indicators from the C2 data stored in the M50 SQLite database. Stable flow on the M50 is defined as an hourly period where average speeds 60 kph or greater and the speed flow relationship is such that there is a level of service of between A and D in that hour.
+
+This metric is based on the C2 hourly aggregated traffic data and the day types defined.
+
+A connection is made to the M50 SQLite databse and the required tables are loaded, i.e. lane numbers, day types and hourly aggregated traffic
+
+```{r cars}
+path <- "/var/datastore/"
+db <- src_sqlite(paste(path, "/SQLite/M50.sqlite", sep = ""), create = FALSE)
+```
+
+```{r}
+laneNum <- tbl(db, "laneNum") %>% 
+  select(Code, direction, lane, sectionName) %>% 
+  collect(n = Inf) 
+
+dayTypes <- tbl(db, "dayTypes1219") %>% 
+  filter(date >= 1420070400, date <= 1451606399) %>% 
+  collect(n = Inf) %>% 
+  mutate(date = as.Date(as.POSIXct(date, origin = "1970-01-01"))) %>% 
+  select(-day)
+
+hourly2015 <- tbl(db, "hour_50_2015") %>% 
+  collect(n = Inf) %>% 
+  mutate(date = as.Date(as.POSIXct(time, origin = "1970-01-01")))
+```
+
+In order to calculate levels of service, the hourly data requires aggregation into total hourly lane flows over all vehicle classes. When aggregating over all classes, the hourly traffic volumes are summed and a weighted average speed is calculated.
+
+Traffic density is calculated as $volume / speed$. Levels of service are then determined based on US HCM density ranges. Finally a column defining stable flow is added where the LOS is in the range A-D and the weighted average speed is 60 kph or greater.
+
+```{r}
+los <- hourly2015 %>% 
+  group_by(siteID, time, date, Code) %>% 
+  summarise(speed = weighted.mean(speed, volume),
+            volume = sum(volume)) %>%
+  mutate(density = volume / speed,
+         los = ifelse(density <= 7, "A",
+               ifelse(density > 7 & density <= 11, "B",
+               ifelse(density > 11 & density <= 16, "C",
+               ifelse(density > 16 & density <= 22, "D",
+               ifelse(density > 22 & density <= 28, "E", "F")))))) %>% 
+  left_join(dayTypes, by = "date") %>% 
+  ungroup() %>% 
+  mutate(stable = ifelse(los %in% c("A", "B", "C", "D") & speed >= 60, 1, 0))
+
+los %>% 
+copy_to(db, ., "los2015", temporary = FALSE)
+
+saveRDS(los, "output/los2015.rds")
+```
+
+In order to determine the percentage of hours in a year where stable flow exists, a sum of annual hours for each daytype is first calculated. 
+A reference column for each day type, site, lane and hour is created to facilitate a table join with the LOS data. 
+
+```{r}
+monthlyHrs <- los %>% 
+  mutate(time = as.POSIXct(time, origin = "1970-01-01")) %>% 
+  group_by(dayType, siteID, Code, hour = hour(time), month = month(time)) %>% 
+  summarise(monthlyHours = n()) %>% 
+  mutate(refMon = paste(dayType, siteID, Code, month, hour, sep = "_")) %>% 
+  ungroup() %>% 
+  select(refMon, monthlyHours)
+```
+
+The LOS data is then aggregated by LOS, day type and hour and the number of hours over the year for each LOS is counted. The dataframe is filtered to include stable flow only and joined with the annualHrs dataframe.
+
+```{r}
+losMonthly <- los %>% 
+  mutate(time = as.POSIXct(time, origin = "1970-01-01")) %>%
+  filter(stable == 1) %>% 
+  group_by(los, Code, siteID, dayType, hour = hour(time), month = month(time), stable) %>% 
+  summarise(stableHours = n()) %>% 
+  mutate(refMon = paste(dayType, siteID, Code, month, hour, sep = "_")) %>% 
+  left_join(monthlyHrs, by = "refMon")
+```
+
+Next the peak hours, peak shoulders and inter peak periods are defined.
+
+A backup of this table is created.
+
+```{r}
+stableFlowMonthly <- losMonthly %>% 
+  left_join(laneNum, by = "Code") %>%
+  mutate(period = ifelse(dayType %in% c(5:6, 12:14), "Off Peak",
+                 ifelse(dayType %in% c(0:4, 7:11) & hour %in% c(0:6, 19:23), "Off Peak",
+                 ifelse(dayType %in% c(0:4, 7:11) & hour %in% c(7, 9), "AM Peak Shoulders",
+                 ifelse(dayType %in% c(0:4, 7:11) & hour %in% c(16, 18), "PM Peak Shoulders",
+                 ifelse(dayType %in% c(0:4, 7:11) & hour %in% c(8), "AM Peak Hour",
+                 ifelse(dayType %in% c(0:4, 7:11) & hour %in% c(17), "PM Peak Hour",
+                 ifelse(dayType %in% c(0:4, 7:11) & hour %in% c(10:16), "Inter Peak", NA))))))))  %>%
+  group_by(dayType, sectionName, month, period, direction) %>% 
+  summarise(stableHours = sum(stableHours),
+            monthlyHours = sum(monthlyHours)) %>% 
+  ungroup() %>% 
+  mutate(dayType = as.factor(dayType)) %>% 
+  filter(!is.na(sectionName))
+
+stableFlowMonthly %>% 
+copy_to(db, ., "stableFlow", temporary = FALSE)
+
+
+saveRDS(stableFlowMonthly, "output/stableFlow/stableFlow.rds")
+```
+
+This table can output percentage stable flow data for 2015 at various levels of aggregation:
+
+* For the full M50 in 2015
+* For each direction in 2015
+* For each M50 section
+* Vkm disaggregated by time periods
+
+Sample output summary tables for aggregation by section, by direction and for the full M50 are produced below.
+
+```{r, warning = FALSE}
+dirLevels <- readRDS("data/nblevels.rds") %>% 
+  append(readRDS("data/sblevels.rds"))
+
+stableFlowMonthly %>%
+  mutate(sectionName = factor(sectionName, levels = dirLevels)) %>% 
+  filter(direction == "Northbound", period %in% c("AM Peak Hour", "PM Peak Hour")) %>% 
+  group_by(sectionName, direction, period) %>% 
+  summarise(stableHours = sum(stableHours),
+            monthlyHours = sum(monthlyHours)) %>% 
+  mutate(percStable = stableHours / monthlyHours) %>% 
+  na.omit() %>% 
+  knitr::kable(digits = 2)
+
+stableFlowMonthly %>% 
+  group_by(direction, period) %>% 
+  summarise(stableHours = sum(stableHours),
+            monthlyHours = sum(monthlyHours)) %>% 
+  mutate(percStable = stableHours / monthlyHours) %>% 
+  na.omit() %>% 
+  knitr::kable(digits = 2)
+
+stableFlowMonthly %>% 
+  group_by(period) %>% 
+  summarise(stableHours = sum(stableHours),
+            monthlyHours = sum(monthlyHours)) %>% 
+  mutate(percStable = stableHours / monthlyHours) %>% 
+  na.omit() %>% 
+  knitr::kable(digits = 2)
+```
+

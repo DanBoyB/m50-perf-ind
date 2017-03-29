@@ -1,0 +1,11 @@
+Section,TMU,linkID,lengthKm,direction
+N2 to Ballymun,1501,77,5.6781301,Northbound
+N3 to N2,1502,66,4.2971702,Northbound
+N4 to N3,1508,21,3.3047299,Northbound
+N7 to N4,1503,19,4.56988,Northbound
+N81 to N7,1504,100,2.61427,Northbound
+Firhouse to N81,1505,52,1.5488,Northbound
+Ballinteer to Firhouse,1506,97,5.91293,Northbound
+Carrickmines to Ballinteer,15010,70,3.5006599,Northbound
+Cherrywood to Carrickmines,15011,79,2.2383201,Northbound
+N11 to Cherrywood,15012,94,2.0908501,Northbound

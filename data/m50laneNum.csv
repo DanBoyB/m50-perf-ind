@@ -1,0 +1,88 @@
+siteID,Code,lane,direction,sectionName
+1012,1652,Northbound 1,Northbound,Coolock Lane to M1
+1012,1653,Northbound 2,Northbound,Coolock Lane to M1
+1012,1654,Northbound 3,Northbound,Coolock Lane to M1
+1012,1655,Southbound 3,Southbound,M1 to Coolock Lane
+1012,1656,Southbound 2,Southbound,M1 to Coolock Lane
+1012,1657,Southbound 1,Southbound,M1 to Coolock Lane
+1501,622,Northbound 1,Northbound,N2 to Ballymun
+1501,623,Northbound 2,Northbound,N2 to Ballymun
+1501,624,Northbound 3,Northbound,N2 to Ballymun
+1501,625,Northbound 4,Northbound,N2 to Ballymun
+1501,626,Southbound 4,Southbound,M1 to Ballymun
+1501,627,Southbound 3,Southbound,M1 to Ballymun
+1501,628,Southbound 2,Southbound,M1 to Ballymun
+1501,629,Southbound 1,Southbound,M1 to Ballymun
+1502,614,Northbound 1,Northbound,N3 to N2
+1502,615,Northbound 2,Northbound,N3 to N2
+1502,616,Northbound 3,Northbound,N3 to N2
+1502,617,Northbound 4,Northbound,N3 to N2
+1502,618,Southbound 4,Southbound,N2 to N3
+1502,619,Southbound 3,Southbound,N2 to N3
+1502,620,Southbound 2,Southbound,N2 to N3
+1502,621,Southbound 1,Southbound,N2 to N3
+1503,897,Northbound 1,Northbound,N7 to N4
+1503,898,Northbound 2,Northbound,N7 to N4
+1503,899,Northbound 3,Northbound,N7 to N4
+1503,900,Northbound 4,Northbound,N7 to N4
+1503,901,Southbound 4,Southbound,N4 to N7
+1503,902,Southbound 3,Southbound,N4 to N7
+1503,903,Southbound 2,Southbound,N4 to N7
+1503,904,Southbound 1,Southbound,N4 to N7
+1504,905,Southbound 1,Southbound,N7 to N81
+1504,906,Southbound 2,Southbound,N7 to N81
+1504,907,Southbound 3,Southbound,N7 to N81
+1504,908,Southbound 4,Southbound,N7 to N81
+1504,909,Northbound 4,Northbound,N81 to N7
+1504,910,Northbound 3,Northbound,N81 to N7
+1504,911,Northbound 2,Northbound,N81 to N7
+1504,912,Northbound 1,Northbound,N81 to N7
+1505,913,Northbound 1,Northbound,Firhouse to N81
+1505,914,Northbound 2,Northbound,Firhouse to N81
+1505,915,Northbound 3,Northbound,Firhouse to N81
+1505,916,Northbound 4,Northbound,Firhouse to N81
+1505,917,Southbound 4,Southbound,N81 to Firhouse
+1505,918,Southbound 3,Southbound,N81 to Firhouse
+1505,919,Southbound 2,Southbound,N81 to Firhouse
+1505,920,Southbound 1,Southbound,N81 to Firhouse
+1506,1086,Northbound 1,Northbound,Ballinteer to Firhouse
+1506,1087,Northbound 2,Northbound,Ballinteer to Firhouse
+1506,1088,Northbound 3,Northbound,Ballinteer to Firhouse
+1506,1089,Southbound 3,Southbound,Firhouse to Ballinteer
+1506,1090,Southbound 2,Southbound,Firhouse to Ballinteer
+1506,1091,Southbound 1,Southbound,Firhouse to Ballinteer
+1507,1074,Southbound 1,Southbound,Ballinteer to Sandyford
+1507,1075,Southbound 2,Southbound,Ballinteer to Sandyford
+1507,1076,Southbound 3,Southbound,Ballinteer to Sandyford
+1507,1077,Northbound 3,Northbound,Sandyford to Ballinteer
+1507,1078,Northbound 2,Northbound,Sandyford to Ballinteer
+1507,1079,Northbound 1,Northbound,Sandyford to Ballinteer
+1508,630,Southbound 1,Southbound,N3 to N4
+1508,631,Southbound 2,Southbound,N3 to N4
+1508,632,Southbound 3,Southbound,N3 to N4
+1508,633,Southbound 4,Southbound,N3 to N4
+1508,634,Northbound 4,Northbound,N4 to N3
+1508,635,Northbound 3,Northbound,N4 to N3
+1508,636,Northbound 2,Northbound,N4 to N3
+1508,637,Northbound 1,Northbound,N4 to N3
+1509,1609,Southbound 1,Southbound,N7 to Ballymount
+1509,1610,Southbound 2,Southbound,N7 to Ballymount
+1509,1611,Southbound 3,Southbound,N7 to Ballymount
+1509,1612,Southbound 4,Southbound,N7 to Ballymount
+1509,1613,Northbound off slip 1,Northbound,Ballymount to N7
+1509,1614,Northbound off slip 2,Northbound,Ballymount to N7
+1509,1615,Northbound 1,Northbound,Ballymount to N7
+1509,1616,Northbound 2,Northbound,Ballymount to N7
+1509,1617,Northbound 3,Northbound,Ballymount to N7
+15010,792,Southbound 1,Southbound,Ballinteer to Carrickmines
+15010,793,Southbound 2,Southbound,Ballinteer to Carrickmines
+15010,794,Northbound 2,Northbound,Carrickmines to Ballinteer
+15010,795,Northbound 1,Northbound,Carrickmines to Ballinteer
+15011,796,Northbound 1,Northbound,Cherrywood to Carrickmines
+15011,797,Northbound 2,Northbound,Cherrywood to Carrickmines
+15011,798,Southbound 2,Southbound,Carrickmines to Cherrywood
+15011,799,Southbound 1,Southbound,Carrickmines to Cherrywood
+15012,800,Northbound 1,Northbound,N11 to Cherrywood
+15012,801,Northbound 2,Northbound,N11 to Cherrywood
+15012,802,Southbound 2,Southbound,Cherrywood to N11
+15012,803,Southbound 1,Southbound,Cherrywood to N11

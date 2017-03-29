@@ -1,0 +1,99 @@
+---
+title: "Joining Day Type data"
+author: "Dan Brennan"
+date: "10 March 2017"
+output: github_document
+---
+
+```{r, warning=FALSE, message=FALSE}
+library(dplyr)
+library(tidyr)
+library(readr)
+library(purrr)
+library(lubridate)
+```
+
+Connect to the M50 SQLite database
+
+```{r}
+db <- src_sqlite("/var/datastore/SQLite/M50.sqlite", create = FALSE)
+```
+
+Create a function to join day types to the C2 aggregated tables and JTMS tables
+
+```{r}
+joinDayTypes <- function(table) {
+    dayTypes15 <- tbl(db, "dayTypes1219") %>% 
+        collect(n = Inf) %>% 
+        mutate(date = as.Date(as.POSIXct(date, origin = "1970-01-01"))) 
+    
+    lapply(table, function(row) {
+         x <- tbl(db, as.character(row)) %>%
+           collect(n = Inf)
+         
+         # c2 tables have "time" column, JTMS tables have "UTC column
+         if ("time" %in% colnames(x)) {
+           x <- x %>%
+             mutate(time = as.POSIXct(time, origin = "1970-01-01"),
+                    date = as.Date(time)) %>%
+             left_join(dayTypes15, by = "date")
+         }
+
+         else {
+           x <- x %>%
+             mutate(time = as.POSIXct(UTC, origin = "1970-01-01"),
+                    date = as.Date(time)) %>%
+             left_join(dayTypes15, by = "date")
+         }
+
+         # # backup table
+         saveRDS(x, paste("output/", as.character(row), ".rds", sep = ""))
+         
+         # drop from SQLite database and replace with updated table
+         db$con %>%
+           db_drop_table(as.character(row))
+         
+         db$con %>%
+           db_insert_into(as.character(row), x)
+
+         })
+}
+
+```
+
+A dataframe of all C2 aggregated table names and JTMS table names is created.
+
+```{r}
+pattern <- "day_|hour_|min15_|min5_|journeyTimes_"
+
+tables <- src_tbls(db) %>% 
+  as_data_frame() %>% 
+  filter(grepl(pattern, value)) %>% 
+  as.list()
+
+tables
+```
+
+The joinDayTypes function is then applied to all C2 aggregated tables and JTMS tables
+
+```{r, eval = FALSE}
+tables %>% 
+  map(joinDayTypes)
+```
+
+Below is a sample of updated C2 hourly aggregated table
+
+```{r}
+tbl(db, "hour_50_2015") %>% 
+    select(-date, -day) %>% 
+    head(10)
+```
+
+Below is a sample of updated JTMS table
+
+```{r}
+tbl(db, "journeyTimes_2016_NB") %>% 
+    select(-outliers, -time, -date, -day) %>% 
+    head(10)
+```
+
