@@ -38,7 +38,10 @@ links <- read_csv("data/links.csv")
     ## )
 
 ``` r
-hourly2015 <- tbl(db, "hour_50_2015")
+hourly2015 <- tbl(db, "hour_50_2015") %>% 
+    filter(siteID != 1012) %>% 
+    mutate(siteID = ifelse(siteID %in% c(1504,1509), 15041509,
+                    ifelse(siteID %in% c(1506,1507), 15061507, siteID)))
 ```
 
 Join day type and length data to C2 hourly data, define time periods and calculate vehicle kilometres travelled. Save a backup rds file.
