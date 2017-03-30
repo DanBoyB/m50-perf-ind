@@ -92,7 +92,7 @@ losMonthly <- los %>%
   left_join(monthlyHrs, by = "refMon")
 ```
 
-Next the peak hours, peak shoulders and inter peak periods are defined.
+Next the peak hours, peak shoulders, inter peak and off peak periods are defined.
 
 A backup of this table is created.
 
