@@ -15,10 +15,22 @@ db <- src_sqlite(paste(path, "/SQLite/M50.sqlite", sep = ""), create = FALSE)
 ```
 
 ``` r
-laneNum <- tbl(db, "laneNum") %>% 
-  select(Code, direction, lane, sectionName) %>% 
-  collect(n = Inf) 
+laneNum <- read_csv("data/m50laneNum.csv") %>% 
+    mutate(siteID = ifelse(siteID %in% c(1504,1509), 15041509,
+                           ifelse(siteID %in% c(1506,1507), 15061507, siteID))) %>% 
+    select(Code, direction, lane, sectionName)
+```
 
+    ## Parsed with column specification:
+    ## cols(
+    ##   siteID = col_integer(),
+    ##   Code = col_integer(),
+    ##   lane = col_character(),
+    ##   direction = col_character(),
+    ##   sectionName = col_character()
+    ## )
+
+``` r
 dayTypes <- tbl(db, "dayTypes1219") %>% 
   filter(date >= 1420070400, date <= 1451606399) %>% 
   collect(n = Inf) %>% 
@@ -27,7 +39,9 @@ dayTypes <- tbl(db, "dayTypes1219") %>%
 
 hourly2015 <- tbl(db, "hour_50_2015") %>% 
   collect(n = Inf) %>% 
-  mutate(date = as.Date(as.POSIXct(time, origin = "1970-01-01")))
+  mutate(date = as.Date(as.POSIXct(time, origin = "1970-01-01")),
+         siteID = ifelse(siteID %in% c(1504,1509), 15041509,
+                           ifelse(siteID %in% c(1506,1507), 15061507, siteID)))
 ```
 
 In order to calculate levels of service, the hourly data requires aggregation into total hourly lane flows over all vehicle classes. When aggregating over all classes, the hourly traffic volumes are summed and a weighted average speed is calculated.
@@ -57,7 +71,7 @@ copy_to(db, ., "los2015", temporary = FALSE)
     ## Database: sqlite 3.11.1 [/var/datastore//SQLite/M50.sqlite]
     ## 
     ##    siteID       time  date  Code     speed volume   density   los dayType
-    ##     <int>      <dbl> <dbl> <int>     <dbl>  <int>     <dbl> <chr>   <dbl>
+    ##     <dbl>      <dbl> <dbl> <int>     <dbl>  <int>     <dbl> <chr>   <dbl>
     ## 1    1501 1420070400 16436   622  97.15389     26 0.2676167     A      14
     ## 2    1501 1420070400 16436   623  97.75681    148 1.5139611     A      14
     ## 3    1501 1420070400 16436   624 101.13158    152 1.5029925     A      14
@@ -177,12 +191,12 @@ stableFlowMonthly %>%
 | Cherrywood to Carrickmines | Northbound | PM Peak Hour |          485|           638|        0.76|
 | Carrickmines to Ballinteer | Northbound | AM Peak Hour |          291|           431|        0.68|
 | Carrickmines to Ballinteer | Northbound | PM Peak Hour |          463|           679|        0.68|
-| Ballinteer to Firhouse     | Northbound | AM Peak Hour |          563|           815|        0.69|
-| Ballinteer to Firhouse     | Northbound | PM Peak Hour |          207|           447|        0.46|
+| Ballinteer to Firhouse     | Northbound | AM Peak Hour |         1291|          1832|        0.70|
+| Ballinteer to Firhouse     | Northbound | PM Peak Hour |          806|          1392|        0.58|
 | Firhouse to N81            | Northbound | AM Peak Hour |          683|           999|        0.68|
 | Firhouse to N81            | Northbound | PM Peak Hour |          790|          1256|        0.63|
-| N81 to N7                  | Northbound | AM Peak Hour |          717|          1005|        0.71|
-| N81 to N7                  | Northbound | PM Peak Hour |          556|          1053|        0.53|
+| N81 to N7                  | Northbound | AM Peak Hour |         1741|          2474|        0.70|
+| N81 to N7                  | Northbound | PM Peak Hour |         1124|          2010|        0.56|
 | N7 to N4                   | Northbound | AM Peak Hour |          940|          1204|        0.78|
 | N7 to N4                   | Northbound | PM Peak Hour |          405|           809|        0.50|
 | N4 to N3                   | Northbound | AM Peak Hour |          950|          1415|        0.67|

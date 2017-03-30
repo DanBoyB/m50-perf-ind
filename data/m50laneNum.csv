@@ -51,12 +51,12 @@ siteID,Code,lane,direction,sectionName
 1506,1089,Southbound 3,Southbound,Firhouse to Ballinteer
 1506,1090,Southbound 2,Southbound,Firhouse to Ballinteer
 1506,1091,Southbound 1,Southbound,Firhouse to Ballinteer
-1507,1074,Southbound 1,Southbound,Ballinteer to Sandyford
-1507,1075,Southbound 2,Southbound,Ballinteer to Sandyford
-1507,1076,Southbound 3,Southbound,Ballinteer to Sandyford
-1507,1077,Northbound 3,Northbound,Sandyford to Ballinteer
-1507,1078,Northbound 2,Northbound,Sandyford to Ballinteer
-1507,1079,Northbound 1,Northbound,Sandyford to Ballinteer
+1507,1074,Southbound 1,Southbound,Firhouse to Ballinteer
+1507,1075,Southbound 2,Southbound,Firhouse to Ballinteer
+1507,1076,Southbound 3,Southbound,Firhouse to Ballinteer
+1507,1077,Northbound 3,Northbound,Ballinteer to Firhouse
+1507,1078,Northbound 2,Northbound,Ballinteer to Firhouse
+1507,1079,Northbound 1,Northbound,Ballinteer to Firhouse
 1508,630,Southbound 1,Southbound,N3 to N4
 1508,631,Southbound 2,Southbound,N3 to N4
 1508,632,Southbound 3,Southbound,N3 to N4
@@ -65,15 +65,15 @@ siteID,Code,lane,direction,sectionName
 1508,635,Northbound 3,Northbound,N4 to N3
 1508,636,Northbound 2,Northbound,N4 to N3
 1508,637,Northbound 1,Northbound,N4 to N3
-1509,1609,Southbound 1,Southbound,N7 to Ballymount
-1509,1610,Southbound 2,Southbound,N7 to Ballymount
-1509,1611,Southbound 3,Southbound,N7 to Ballymount
-1509,1612,Southbound 4,Southbound,N7 to Ballymount
-1509,1613,Northbound off slip 1,Northbound,Ballymount to N7
-1509,1614,Northbound off slip 2,Northbound,Ballymount to N7
-1509,1615,Northbound 1,Northbound,Ballymount to N7
-1509,1616,Northbound 2,Northbound,Ballymount to N7
-1509,1617,Northbound 3,Northbound,Ballymount to N7
+1509,1609,Southbound 1,Southbound,N7 to N81
+1509,1610,Southbound 2,Southbound,N7 to N81
+1509,1611,Southbound 3,Southbound,N7 to N81
+1509,1612,Southbound 4,Southbound,N7 to N81
+1509,1613,Northbound off slip 1,Northbound,N81 to N7
+1509,1614,Northbound off slip 2,Northbound,N81 to N7
+1509,1615,Northbound 1,Northbound,N81 to N7
+1509,1616,Northbound 2,Northbound,N81 to N7
+1509,1617,Northbound 3,Northbound,N81 to N7
 15010,792,Southbound 1,Southbound,Ballinteer to Carrickmines
 15010,793,Southbound 2,Southbound,Ballinteer to Carrickmines
 15010,794,Northbound 2,Northbound,Carrickmines to Ballinteer

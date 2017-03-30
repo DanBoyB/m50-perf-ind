@@ -27,9 +27,10 @@ db <- src_sqlite(paste(path, "/SQLite/M50.sqlite", sep = ""), create = FALSE)
 ```
 
 ```{r}
-laneNum <- tbl(db, "laneNum") %>% 
-  select(Code, direction, lane, sectionName) %>% 
-  collect(n = Inf) 
+laneNum <- read_csv("data/m50laneNum.csv") %>% 
+    mutate(siteID = ifelse(siteID %in% c(1504,1509), 15041509,
+                           ifelse(siteID %in% c(1506,1507), 15061507, siteID))) %>% 
+    select(Code, direction, lane, sectionName)
 
 dayTypes <- tbl(db, "dayTypes1219") %>% 
   filter(date >= 1420070400, date <= 1451606399) %>% 
@@ -39,7 +40,9 @@ dayTypes <- tbl(db, "dayTypes1219") %>%
 
 hourly2015 <- tbl(db, "hour_50_2015") %>% 
   collect(n = Inf) %>% 
-  mutate(date = as.Date(as.POSIXct(time, origin = "1970-01-01")))
+  mutate(date = as.Date(as.POSIXct(time, origin = "1970-01-01")),
+         siteID = ifelse(siteID %in% c(1504,1509), 15041509,
+                           ifelse(siteID %in% c(1506,1507), 15061507, siteID)))
 ```
 
 In order to calculate levels of service, the hourly data requires aggregation into total hourly lane flows over all vehicle classes. When aggregating over all classes, the hourly traffic volumes are summed and a weighted average speed is calculated.
