@@ -27,7 +27,7 @@ db <- src_sqlite(paste(path, "/SQLite/M50.sqlite", sep = ""), create = FALSE)
 ```
 
 ```{r}
-laneNum <- tbl(db, "laneNum") %>% 
+laneNum <- read_csv("data/m50laneNum.csv") %>%
     mutate(siteID = ifelse(siteID %in% c(1504,1509), 15041509,
                            ifelse(siteID %in% c(1506,1507), 15061507, siteID)))
 
@@ -66,7 +66,8 @@ traffic <- tbl(db, "min5_50_2015") %>%
     rename(siteID = siteID.x) %>% 
     left_join(links, by = "siteID", copy = TRUE) %>% 
     collect(n = Inf) %>% 
-    mutate(dayType = as.integer(dayType),
+    mutate(month = month(as.POSIXct(dateTime, origin = "1970-01-01")),
+           dayType = as.integer(dayType),
            ref = paste(linkID, dayType, timeSeq, sep = "_"))
 ```
 
@@ -103,7 +104,8 @@ jTSB <- tbl(db, "journeyTimes_2015_SB") %>%
 
 jTime <- jTNB %>% 
     bind_rows(jTSB) %>% 
-    mutate(ref = paste(linkID, dayType, timeSeq, sep = "_"),
+    mutate(month = month(as.POSIXct(dateTime, origin = "1970-01-01")),
+           ref = paste(linkID, dayType, timeSeq, sep = "_"),
            hour = hour(as.POSIXct(dateTime, origin = "1970-01-01"))) %>% 
     mutate(speed = lengthKm / (journeyTime / 60))
 
@@ -116,7 +118,7 @@ The cleaned journey time data is then aggregated by section, direction, day type
 
 ```{r}
 jTimeAgg <- jTimeClean %>%
-    group_by(linkID, ref, direction, sectionName, dayType, hour) %>% 
+    group_by(linkID, dayType, timeSeq, ref, direction, sectionName, hour) %>% 
     summarise(medianJt = median(journeyTime / lengthKm),
               meanJt = mean(journeyTime / lengthKm),
               stdevJt = ifelse(is.na(sd(journeyTime / lengthKm)), 0, sd(journeyTime / lengthKm)),
@@ -137,9 +139,11 @@ The traffic data is joined to the journey time data and vehicle kilometres trave
 ```{r}
 jtC2join <- jTimeAgg %>% 
     left_join(traffic, by = "ref") %>% 
+    # na.omit() %>% 
     mutate(vkt = traffic * lengthKm) %>% 
+    rename(dayType = dayType.x) %>% 
     mutate(period = ifelse(dayType %in% c(5:6, 12:14), "Off Peak",
-                           ifelse(dayType %in% c(0:4, 7:11) & hour %in% c(0:6, 19:23), "Off Peak",
+                           ifelse(dayType %in% c(0:4, 7:11) & hour %in% c(0:6, 19:23), "Off Peak", 
                            ifelse(dayType %in% c(0:4, 7:11) & hour %in% c(7, 9), "AM Peak Shoulders",
                            ifelse(dayType %in% c(0:4, 7:11) & hour %in% c(16, 18), "PM Peak Shoulders",
                            ifelse(dayType %in% c(0:4, 7:11) & hour %in% c(8), "AM Peak Hour",

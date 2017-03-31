@@ -15,10 +15,21 @@ db <- src_sqlite(paste(path, "/SQLite/M50.sqlite", sep = ""), create = FALSE)
 ```
 
 ``` r
-laneNum <- tbl(db, "laneNum") %>% 
+laneNum <- read_csv("data/m50laneNum.csv") %>%
     mutate(siteID = ifelse(siteID %in% c(1504,1509), 15041509,
                            ifelse(siteID %in% c(1506,1507), 15061507, siteID)))
+```
 
+    ## Parsed with column specification:
+    ## cols(
+    ##   siteID = col_integer(),
+    ##   Code = col_integer(),
+    ##   lane = col_character(),
+    ##   direction = col_character(),
+    ##   sectionName = col_character()
+    ## )
+
+``` r
 dayTypes <- tbl(db, "dayTypes1219") %>% 
     filter(date >= 1420070400, date <= 1451606399) %>% 
     mutate(date = sql(datetime(date, 'unixepoch'))) %>% 
@@ -65,8 +76,9 @@ traffic <- tbl(db, "min5_50_2015") %>%
     rename(siteID = siteID.x) %>% 
     left_join(links, by = "siteID", copy = TRUE) %>% 
     collect(n = Inf) %>% 
-    mutate(dayType = as.integer(dayType),
-           ref = paste(linkID, dayType, timeSeq, sep = "_"))
+    mutate(month = month(dateTime),
+           dayType = as.integer(dayType),
+           ref = paste(linkID, dayType, timeSeq, month, sep = "_"))
 ```
 
 The traffic data is then grouped by the link ID and refence column to group
@@ -81,13 +93,13 @@ traffic %>%
     kable()
 ```
 
-|  linkID| ref        |  traffic|
-|-------:|:-----------|--------:|
-|      17| 17\_0\_1   |     4187|
-|      17| 17\_0\_10  |     2873|
-|      17| 17\_0\_100 |    40127|
-|      17| 17\_0\_101 |    40746|
-|      17| 17\_0\_102 |    39613|
+|  linkID| ref                    |  traffic|
+|-------:|:-----------------------|--------:|
+|      17| 17\_0\_100\_1420445700 |      840|
+|      17| 17\_0\_100\_1421050500 |      993|
+|      17| 17\_0\_100\_1421655300 |      990|
+|      17| 17\_0\_100\_1422260100 |     1041|
+|      17| 17\_0\_100\_1422864900 |      948|
 
 Journey Time data for each direction is retrived from the database and joined with the time sequence and JTMS link tables. Northbound & southbound tables are combined, references are created to match the traffic data references. Corresponding speeds are calculated and the data is cleaned by removing zero length journey times and excluding speeds greater than 150 kph.
 
@@ -110,7 +122,8 @@ jTSB <- tbl(db, "journeyTimes_2015_SB") %>%
 
 jTime <- jTNB %>% 
     bind_rows(jTSB) %>% 
-    mutate(ref = paste(linkID, dayType, timeSeq, sep = "_"),
+    mutate(month = month(dateTime),
+           ref = paste(linkID, dayType, timeSeq, sep = "_"),
            hour = hour(as.POSIXct(dateTime, origin = "1970-01-01"))) %>% 
     mutate(speed = lengthKm / (journeyTime / 60))
 
@@ -169,7 +182,7 @@ total %>%
 
 |  buffTimeIndex|  miseryIndex|
 |--------------:|------------:|
-|       33.88534|     149.2404|
+|             NA|           NA|
 
 ``` r
 period <- jtC2join %>% 
@@ -181,11 +194,11 @@ period %>%
     kable()
 ```
 
-| period            |  buffTimeIndex|  miseryIndex|
-|:------------------|--------------:|------------:|
-| AM Peak Hour      |      95.940127|     235.5482|
-| AM Peak Shoulders |      61.623232|     187.7608|
-| Inter Peak        |       8.650294|     115.4879|
-| Off Peak          |       8.545629|     112.6733|
-| PM Peak Hour      |      87.606107|     229.3346|
-| PM Peak Shoulders |      76.855101|     207.4263|
+| period            | buffTimeIndex | miseryIndex |
+|:------------------|:--------------|:------------|
+| AM Peak Hour      | NA            | NA          |
+| AM Peak Shoulders | NA            | NA          |
+| Inter Peak        | NA            | NA          |
+| Off Peak          | NA            | NA          |
+| PM Peak Hour      | NA            | NA          |
+| PM Peak Shoulders | NA            | NA          |
