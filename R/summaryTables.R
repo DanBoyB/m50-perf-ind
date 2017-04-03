@@ -15,12 +15,11 @@ stableFlow <- readRDS("output/stableFlow/stableFlow.rds") %>%
               monthlyHours = sum(monthlyHours)) %>% 
     mutate(percStable = stableHours / monthlyHours)
 
-bufferMisery <- readRDS("output/bufferMisery/bufferMisery.rds") %>% 
-    filter(sectionName == "N2 to Ballymun")
-    
+bufferMisery <- readRDS("output/bufferMisery/bufferMisery1.rds") %>% 
     group_by(sectionName, month, period, direction) %>% 
     summarise(buffTimeIndex = weighted.mean(buffTimeIndex, vkt),
               miseryIndex = weighted.mean(miseryIndex, vkt))
+
 
 combStats <- vkm %>% 
     bind_cols(stableFlow[7]) %>% 
