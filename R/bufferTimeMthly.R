@@ -70,7 +70,8 @@ jTime <- jTNB %>%
 
 jTimeClean <- jTime %>% 
     filter(journeyTime > 0,
-           speed <= 150)
+           speed <= 150,
+           !linkID %in% c(76,77))
 
 ##---------------------------------------------------------------------------------##
 
@@ -135,7 +136,7 @@ stats <- monthly %>%
     unnest() %>% 
     rename(month = month.x)
 
-saveRDS(stats, "output/bufferMisery/bufferMisery1.rds")  
+saveRDS(stats, "output/bufferMisery/bufferMisery.rds")  
    
 
 ##---------------------------------------------------------------------------------##
