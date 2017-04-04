@@ -109,7 +109,7 @@ stableFlowMonthly <- losMonthly %>%
                  ifelse(dayType %in% c(0:4, 7:11) & hour %in% c(8), "AM Peak Hour",
                  ifelse(dayType %in% c(0:4, 7:11) & hour %in% c(17), "PM Peak Hour",
                  ifelse(dayType %in% c(0:4, 7:11) & hour %in% c(10:16), "Inter Peak", NA))))))))  %>%
-  group_by(dayType, sectionName, month, period, direction) %>% 
+  group_by(dayType, siteID, sectionName, month, period, direction) %>% 
   summarise(stableHours = sum(stableHours),
             monthlyHours = sum(monthlyHours)) %>% 
   ungroup() %>% 

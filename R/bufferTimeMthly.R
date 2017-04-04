@@ -78,7 +78,8 @@ jTimeClean <- jTime %>%
 monthlyTraf <- function(x) {
     traffic %>% 
         filter(month == x) %>% 
-        group_by(linkID, ref) %>% 
+        rename(siteID = siteID.x) %>% 
+        group_by(siteID, linkID, ref) %>% 
         summarise(month = first(month), traffic = sum(volume))
 }
 
@@ -86,7 +87,7 @@ monthlyTraf <- function(x) {
 monthlyJT <- function(x) {
     jTimeClean %>% 
         filter(month == x) %>% 
-        group_by(linkID, dayType, timeSeq, ref, direction, sectionName, hour) %>% 
+        group_by(siteID, linkID, dayType, timeSeq, ref, direction, sectionName, hour) %>% 
         summarise(month = first(month),
                   medianJt = median(journeyTime / lengthKm),
                   meanJt = mean(journeyTime / lengthKm),
@@ -120,7 +121,8 @@ joinCalc <- function(traffic, jTime) {
 
 sumStats <- function(stats) {
     stats %>% 
-        group_by(sectionName, month.x, period, direction) %>% 
+        rename(siteID = siteID.x) %>% 
+        group_by(siteID, sectionName, month.x, period, direction) %>% 
         summarise(buffTimeIndex = weighted.mean(buffTimeIndex, vkt),
                   miseryIndex = weighted.mean(miseryIndex, vkt))
 }
