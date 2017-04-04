@@ -136,7 +136,7 @@ monthly <- data_frame(monthNo = c(1:12)) %>%
 stats <- monthly %>% 
     select(stats) %>% 
     unnest() %>% 
-    rename(month = month.x)
+    rename(siteID = siteID.x, month = month.x)
 
 saveRDS(stats, "output/bufferMisery/bufferMisery.rds")  
    
