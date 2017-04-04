@@ -23,7 +23,8 @@ bufferMisery <- readRDS("output/bufferMisery/bufferMisery.rds") %>%
               miseryIndex = weighted.mean(miseryIndex, vkt))
 
 combStats <- vkm %>% 
-    bind_cols(stableFlow[7]) %>% 
+    bind_cols(stableFlow[5:6]) %>% 
     bind_cols(bufferMisery[5:6])
 
 saveRDS(combStats, "output/combStats/combStats.rds")
+
