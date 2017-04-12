@@ -1,6 +1,7 @@
 library(dplyr)
 library(tidyr)
 library(readr)
+library(ggplot2)
 library(purrr)
 library(lubridate)
 
@@ -28,3 +29,13 @@ combStats <- vkm %>%
 
 saveRDS(combStats, "output/combStats/combStats.rds")
 
+combStats %>% 
+    mutate(percStable = stableHours / monthlyHours) %>% 
+    gather(stat, value, 5:11) %>% 
+    filter(stat == "percStable", 
+           period == "AM Peak Hour"
+           ) %>% 
+    ggplot(aes(as.factor(month), value, group = siteID, colour = siteID)) +
+    geom_line() +
+    facet_grid(direction ~ siteID) +
+    theme(legend.position = "none")
