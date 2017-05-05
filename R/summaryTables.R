@@ -1,8 +1,4 @@
-library(dplyr)
-library(tidyr)
-library(readr)
-library(ggplot2)
-library(purrr)
+library(tidyverse)
 library(lubridate)
 
 vkm <- readRDS("output/vkm/vkm2015.rds") %>% 

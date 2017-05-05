@@ -249,7 +249,7 @@ dayTypes <- function(year) {
 }
 ```
 
-A dataframe is created defining all day types between 2012 and 2019, which is then loaded into the M50 SQLite database
+A dataframe is created defining all day types between 2012 and 2019
 
 ```{r}
 dayTypes1219 <- c(2012:2019) %>%
@@ -257,17 +257,10 @@ dayTypes1219 <- c(2012:2019) %>%
     bind_rows() %>% 
     mutate(date = as.numeric(as.POSIXct(date)))
     
-dayTypes1219 %>% 
-  head(10) %>% 
-  kable()
+
 ```
 
-```{r, eval = FALSE}
-db <- src_sqlite("/var/datastore/SQLite/M50.sqlite", create = FALSE)
-db_insert_into(con = db$con, table = "dayTypes1219", values = dayTypes1219)
-```
-
-Text descriptions for each day types are defined and loaded into the M50 SQLite database.
+Text descriptions for each day types are defined and data is output to a csv file.
 
 ```{r}
 dtDesc <- data_frame(dayType = c(0:7, 9, 11, 12:14)) %>% 
@@ -285,12 +278,10 @@ dtDesc <- data_frame(dayType = c(0:7, 9, 11, 12:14)) %>%
                                 "Christmas period holidays",
                                 "Christmas Day / New Years Day")))
 
-dtDesc %>% 
-  kable()
+dayTypes1219 %>% 
+  left_join(dtDesc) %>% 
+  write_csv("output/dayTypes1219.csv")
 ```
 
-```{r, eval = FALSE}
-db_insert_into(con = db$con, table = "dayTypesRef", values = dtDesc)
-```
 
 

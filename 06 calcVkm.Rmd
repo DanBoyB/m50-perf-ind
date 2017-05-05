@@ -36,40 +36,45 @@ lengths <- tbl(db, "tmuLengths") %>%
 
 links <- read_csv("data/links.csv")
 
+m50laneNum <- read_csv("data/m50laneNum.csv")
+
 hourly2015 <- tbl(db, "hour_50_2015") %>% 
     filter(siteID != 1012) %>% 
     mutate(siteID = ifelse(siteID %in% c(1504,1509), 15041509,
-                    ifelse(siteID %in% c(1506,1507), 15061507, siteID)))
+                    ifelse(siteID %in% c(1506,1507), 15061507, siteID))) %>% 
+    select(-day, -dayType)
 ```
 
 Join day type and length data to C2 hourly data, define time periods and calculate vehicle kilometres travelled. Save a backup rds file.
 
 ```{r}
 vkm2015 <- hourly2015 %>%
-  group_by(time, siteID) %>% 
-  summarise(volume = sum(volume)) %>%
-  collect(n = Inf) %>% 
-  ungroup() %>% 
-  mutate(time =  as.POSIXct(time, origin = "1970-01-01"),
-         date = as.Date(time),
-         hour = hour(time),
-         month = month(time)) %>% 
-  left_join(dayTypes, by = "date") %>% 
-  mutate(period = ifelse(dayType %in% c(5:6, 12:14), "Off Peak",
+    collect(n = Inf) %>% 
+    mutate(time =  as.POSIXct(time, origin = "1970-01-01"),
+           date = as.Date(time),
+           hour = hour(time),
+           month = month(time)) %>% 
+    left_join(dayTypes, by = "date") %>% 
+    mutate(period = ifelse(dayType %in% c(5:6, 12:14), "Off Peak",
                  ifelse(dayType %in% c(0:4, 7:11) & hour %in% c(0:6, 19:23), "Off Peak",
                  ifelse(dayType %in% c(0:4, 7:11) & hour %in% c(7, 9), "AM Peak Shoulders",
                  ifelse(dayType %in% c(0:4, 7:11) & hour %in% c(16, 18), "PM Peak Shoulders",
                  ifelse(dayType %in% c(0:4, 7:11) & hour %in% c(8), "AM Peak Hour",
                  ifelse(dayType %in% c(0:4, 7:11) & hour %in% c(17), "PM Peak Hour",
-                 ifelse(dayType %in% c(0:4, 7:11) & hour %in% c(10:16), "Inter Peak", NA)))))))) 
+                 ifelse(dayType %in% c(0:4, 7:11) & hour %in% c(10:16), "Inter Peak", NA)))))))) %>% 
+    left_join(m50laneNum, by = "Code") %>% 
+    rename(siteID = siteID.x) %>% 
+    filter(Code != 1081) %>% 
+    group_by(time, siteID, direction, dayType, hour, month, period) %>% 
+    summarise(volume = sum(volume))
 
 vkm2015 <- vkm2015 %>% 
-  left_join(links, by = "siteID", copy = TRUE) %>%
+  left_join(links, by = "siteID") %>%
   ungroup() %>% 
   mutate(vkm = volume * lengthKm,
          mvkm = vkm / 1e06,
          siteID = as.factor(siteID)) %>% 
-  rename(sectionName = Section) %>% 
+  rename(sectionName = Section, direction = direction.x) %>% 
   select(siteID, sectionName, Sec, dayType, month, period, direction, vkm, mvkm)
 
 saveRDS(vkm2015, "output/vkm/vkm2015.rds")
