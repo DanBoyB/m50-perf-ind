@@ -1,36 +1,28 @@
 library(tidyverse)
 library(stringr)
-library(XML)
+#library(XML)
 library(xml2)
 
-ttDir <- "~/datastore/TravelTimes/2017-03-19/"
+ttDir <- "~/datastore/TravelTimes/"
 
-x <- read_xml(paste(ttDir, "Content_2017-03-19T010359.xml", sep = ""))
-
-ns <- xml_ns_rename(xml_ns(x), d1 = "d2LogicalModel")
-
-y <- x %>% 
-    xml_find_all("//d2LogicalModel:siteMeasurements", ns) %>% 
-    xml_children() 
-
-z <- x %>% 
-    xml_find_all("//d2LogicalModel:siteMeasurements", ns) %>% 
-    xml_children() %>% 
-    xml_children() %>% 
-    xml_children()
-
-y_df <- data_frame(nodeset = y) %>% 
-    mutate(n = nodeset %>% map(~ xml_name(.)),
-           text = nodeset %>% map(~ xml_text(.))) %>% 
-    filter(n != "measuredValue") %>% 
-    select(-nodeset) %>% 
-    unnest() %>% 
-    filter(str_detect(text, 'M50'))
+times_xml <- read_xml(paste(ttDir, "2017-03-19/Content_2017-03-19T010359.xml", sep = ""))
+sites_xml <- read_xml(paste(ttDir, "site_locations.xml", sep = ""))
 
 
-z_df <- data_frame(row = seq_along(z),
-                   nodeset = z) %>% 
-    mutate(n = nodeset %>% map(~ xml_name(.)),
-           text = nodeset %>% map(~ xml_text(.)),
-           i = nodeset %>% map(~ seq_along(.)))
+ns <- xml_ns_rename(xml_ns(sites_xml), d1 = "d2LogicalModel")
 
+sites <- sites_xml %>% 
+    xml_find_all("//d2LogicalModel:measurementSiteRecord", ns)
+
+sites_df <- data_frame(nodeset = sites) %>% 
+    mutate(site_ref = nodeset %>% map(~ xml_attrs(.)),
+           site_desc = nodeset %>% 
+               xml_find_all("//d2LogicalModel:measurementSiteName", ns) %>% 
+               xml_text(.),
+           children = nodeset %>% map(~ xml_children(.)),
+           from_lat = nodeset %>% 
+               xml_find_all("//d2LogicalModel:from", ns))
+
+
+
+          
