@@ -34,7 +34,8 @@ dayTypes <- tbl(db, "dayTypes1219") %>%
 lengths <- tbl(db, "tmuLengths") %>% 
   collect()
 
-links <- read_csv("data/links.csv")
+links <- read_csv("data/links.csv") %>% 
+    mutate(ref = paste(siteID, direction, sep = "_"))
 
 m50laneNum <- read_csv("data/m50laneNum.csv")
 
@@ -68,14 +69,15 @@ vkm2015 <- hourly2015 %>%
     group_by(time, siteID, direction, dayType, hour, month, period) %>% 
     summarise(volume = sum(volume))
 
-vkm2015 <- vkm2015 %>% 
-  left_join(links, by = "siteID") %>%
-  ungroup() %>% 
-  mutate(vkm = volume * lengthKm,
-         mvkm = vkm / 1e06,
-         siteID = as.factor(siteID)) %>% 
-  rename(sectionName = Section, direction = direction.x) %>% 
-  select(siteID, sectionName, Sec, dayType, month, period, direction, vkm, mvkm)
+vkm2015 <- vkm2015 %>%
+    mutate(ref = paste(siteID, direction, sep = "_")) %>% 
+    left_join(links, by = "ref") %>%
+    ungroup() %>% 
+    mutate(vkm = volume * lengthKm,
+           mvkm = vkm / 1e06,
+           siteID = as.factor(siteID.x)) %>% 
+    rename(sectionName = Section, direction = direction.x) %>% 
+    select(siteID, sectionName, Sec, dayType, month, period, direction, vkm, mvkm)
 
 saveRDS(vkm2015, "output/vkm/vkm2015.rds")
 
