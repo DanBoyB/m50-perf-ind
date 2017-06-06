@@ -1,5 +1,6 @@
 library(tidyverse)
 
+# Load data
 stats <- readRDS("output/combStats/combStats.rds")
 
 links <- read_csv("data/links.csv") %>% 
@@ -22,6 +23,7 @@ tidy_stats <- stats %>%
                                      "May", "Jun", "Jul", "Aug",
                                      "Sep", "Oct", "Nov", "Dec")))
 
+# Plot vkm
 vkm_2015 <- readRDS("output/vkm/vkm2015.rds") %>% 
     group_by(month) %>% 
     summarise(mvkm = sum(mvkm)) %>% 
@@ -34,47 +36,54 @@ vkm_2015 <- readRDS("output/vkm/vkm2015.rds") %>%
 vkm_plot <- vkm_2015 %>% 
     ggplot(aes(month, mvkm)) +
     geom_bar(stat = "identity", fill = "dark blue", alpha = 0.7, width = 0.8) +
-    theme_minimal() +
+    theme_light() +
     labs(x = "", y = "million vehicle km travelled in 2015") +
     theme(legend.position = "none",
           axis.text.x = element_text(angle = 90, hjust = 1))
 
+# Plot Stable Flow
 flow_stability <- stats %>% 
     group_by(period, direction) %>% 
     summarise(stableHours = sum(stableHours),
               monthlyHours = sum(monthlyHours)) %>% 
     mutate(percStable = round((stableHours / monthlyHours) * 100, 2)) 
-    
 
-plot_stable_flow <- flow_stability %>% 
+stable_flow_plot <- flow_stability %>% 
     ggplot(aes(reorder(period, -percStable), percStable)) +
-    geom_bar(stat = "identity", fill = "dark blue", alpha = 0.7, width = 0.8) +
+    geom_bar(stat = "identity", fill = "dark cyan", alpha = 0.7, width = 0.8) +
     coord_cartesian(ylim = c(0,100)) +
     facet_wrap(~ direction) +
-    theme_minimal() +
+    theme_light() +
     labs(x = "", y = "% stable flow in 2015") +
     theme(legend.position = "none",
           axis.text.x = element_text(angle = 90, hjust = 1))
 
-ggsave("vkm-plot.jpeg", plot = vkm_plot, path = "output/plots/", width = 8, height = 5)
-ggsave("stable-flow-plot.jpeg", plot = plot_stable_flow, path = "output/plots/", width = 8, height = 5)
-
-
-
-tidy_stats %>% 
-    filter(period == "PM Peak Hour",
+# Plot buffer time index
+buffer_plot <- tidy_stats %>% 
+    filter(#period == "PM Peak Hour",
            stat == "buffTimeIndex", 
            Sec == "N7 - N4") %>% 
-    ggplot(aes(as.factor(month), value, group = siteID, fill = siteID)) +
-    geom_bar(stat = "identity", fill = "dark blue", alpha = 0.7, width = 0.8) +
-    facet_wrap(~ direction) +
+    ggplot(aes(reorder(period, -value), value, group = siteID, fill = siteID)) +
+    geom_bar(stat = "identity", fill = "dark green", alpha = 0.7, width = 0.8) +
     theme_light() +
     labs(x = "", y = "Buffer Time Index (%)") +
     theme(legend.position = "none",
           axis.text.x = element_text(angle = 90, hjust = 1))
 
+# Plot misery index
+misery_plot <- tidy_stats %>% 
+    filter(#period == "PM Peak Hour",
+        stat == "miseryIndex", 
+        Sec == "N7 - N4") %>% 
+    ggplot(aes(reorder(period, -value), value, group = siteID, fill = siteID)) +
+    geom_bar(stat = "identity", fill = "dark red", alpha = 0.7, width = 0.8) +
+    theme_light() +
+    labs(x = "", y = "Misery Index (%)") +
+    theme(legend.position = "none",
+          axis.text.x = element_text(angle = 90, hjust = 1))
 
-
-
-
-
+# Save plots
+ggsave("vkm-plot.jpeg", plot = vkm_plot, path = "output/plots/", width = 8, height = 5)
+ggsave("stable-flow-plot.jpeg", plot = stable_flow_plot, path = "output/plots/", width = 8, height = 5)
+ggsave("buffer-plot.jpeg", plot = buffer_plot, path = "output/plots/", width = 8, height = 5)
+ggsave("misery-plot.jpeg", plot = misery_plot, path = "output/plots/", width = 8, height = 5)
