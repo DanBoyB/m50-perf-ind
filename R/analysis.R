@@ -1,7 +1,9 @@
 library(tidyverse)
 
 # Load data
-stats <- readRDS("output/combStats/combStats.rds")
+stats <- readRDS("output/combStats/combStats.rds") %>% 
+    mutate(date = as.Date(strptime(paste(2015, month, 01, sep = "-"), 
+                                   format = "%Y-%m-%d")))
 
 links <- read_csv("data/links.csv") %>% 
     slice(2:11) %>% 
@@ -17,26 +19,22 @@ tidy_stats <- stats %>%
     left_join(links, by = "siteID") %>% 
     mutate(Sec = factor(Sec, levels = lev)) %>% 
     ungroup() %>% 
-    mutate(month = as.factor(month.abb[month]),
-           month = factor(month,
-                          levels = c("Jan", "Feb", "Mar", "Apr",
-                                     "May", "Jun", "Jul", "Aug",
-                                     "Sep", "Oct", "Nov", "Dec")))
+    mutate(date = as.Date(strptime(paste(2015, month, 01, sep = "-"), 
+                                   format = "%Y-%m-%d")))
 
 # Plot vkm
 vkm_2015 <- readRDS("output/vkm/vkm2015.rds") %>% 
     group_by(month) %>% 
     summarise(mvkm = sum(mvkm)) %>% 
-    mutate(month = as.factor(month.abb[month]),
-           month = factor(month,
-                          levels = c("Jan", "Feb", "Mar", "Apr",
-                                     "May", "Jun", "Jul", "Aug",
-                                     "Sep", "Oct", "Nov", "Dec")))
+    mutate(date = as.Date(strptime(paste(2015, month, 01, sep = "-"), 
+                                   format = "%Y-%m-%d")))
 
 vkm_plot <- vkm_2015 %>% 
-    ggplot(aes(month, mvkm)) +
-    geom_bar(stat = "identity", fill = "dark blue", alpha = 0.7, width = 0.8) +
+    ggplot(aes(date, mvkm)) +
+    geom_line(colour = "dark blue", alpha = 0.7) +
     theme_light() +
+    scale_x_date(date_breaks = "months",
+                 date_labels = "%b") +
     labs(x = "", y = "million vehicle km travelled in 2015") +
     theme(legend.position = "none",
           axis.text.x = element_text(angle = 90, hjust = 1))
@@ -60,24 +58,34 @@ stable_flow_plot <- flow_stability %>%
 
 # Plot buffer time index
 buffer_plot <- tidy_stats %>% 
-    filter(#period == "PM Peak Hour",
-           stat == "buffTimeIndex", 
-           Sec == "N7 - N4") %>% 
-    ggplot(aes(reorder(period, -value), value, group = siteID, fill = siteID)) +
-    geom_bar(stat = "identity", fill = "dark green", alpha = 0.7, width = 0.8) +
+    filter(Sec == "N7 - N4", 
+           period %in% c("AM Peak Hour", "PM Peak Hour"), 
+           direction == "Southbound", 
+           stat == "buffTimeIndex") %>% 
+    ggplot(aes(x = date, group = 1)) +
+    geom_point(aes(y = value), colour = "dark green", alpha = 0.7) +
+    geom_segment(aes(xend = date, yend = 0, y = value), colour = "dark green", alpha = 0.7) +
+    scale_x_date(date_breaks = "months",
+                 date_labels = "%b") +
     theme_light() +
+    facet_wrap( ~ period) +
     labs(x = "", y = "Buffer Time Index (%)") +
     theme(legend.position = "none",
           axis.text.x = element_text(angle = 90, hjust = 1))
 
 # Plot misery index
 misery_plot <- tidy_stats %>% 
-    filter(#period == "PM Peak Hour",
-        stat == "miseryIndex", 
-        Sec == "N7 - N4") %>% 
-    ggplot(aes(reorder(period, -value), value, group = siteID, fill = siteID)) +
-    geom_bar(stat = "identity", fill = "dark red", alpha = 0.7, width = 0.8) +
+    filter(Sec == "N7 - N4", 
+           period %in% c("AM Peak Hour", "PM Peak Hour"), 
+           direction == "Southbound", 
+           stat == "miseryIndex") %>% 
+    ggplot(aes(x = date, group = 1)) +
+    geom_point(aes(y = value), colour = "dark red", alpha = 0.7) +
+    geom_segment(aes(xend = date, yend = 0, y = value), colour = "dark red", alpha = 0.7) +
+    scale_x_date(date_breaks = "months",
+                 date_labels = "%b") +
     theme_light() +
+    facet_wrap( ~ period) +
     labs(x = "", y = "Misery Index (%)") +
     theme(legend.position = "none",
           axis.text.x = element_text(angle = 90, hjust = 1))
