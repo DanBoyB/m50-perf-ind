@@ -1,15 +1,36 @@
+#!/usr/bin/Rscript
+
 library(tidyverse)
-library(stringr)
 library(xml2)
+library(rvest)
 
+opendata <- read_html("http://data.tii.ie/Datasets/Its/DatexII/TravelTimeData/")
 
+table <- opendata %>% 
+    html_node("table") %>% 
+    html_table() %>% 
+    as_data_frame() %>% 
+    rename(from_time = X1,
+           file_type = X2,
+           folder_name = X3) %>% 
+    mutate(site = paste0("http://data.tii.ie/Datasets/Its/DatexII/TravelTimeData/", folder_name, "/")) %>% 
+    filter(!folder_name %in% c("Content.xml", "Metadata.xml"))
 
-ttDir <- "~/datastore/TravelTimes/2017-03-19/"
+to_df <- function(site) {
+    df <- read_html(site) %>% 
+        html_node("table") %>% 
+        html_table() %>% 
+        as_data_frame() %>% 
+        filter(!grepl("Metadata", X3))
+    
+    # Add a 3 second sleep to avoid timeout
+    Sys.sleep(3)
+    
+    return(df)
+}    
 
-all_files <- list.files(pattern = "Content", path = ttDir, full.names = TRUE)
-
-extract_times <- function(file) {
-    times_xml <- read_xml(all_files[13]) %>% 
+extract_times <- function(url) {
+    times_xml <- read_xml(url) %>% 
         xml_ns_strip()
     
     times <- times_xml %>% 
@@ -65,44 +86,18 @@ extract_times <- function(file) {
     
     # Combine recorded travel times with faults (as NA travel time values)
     times_df <- times_df %>% 
-        bind_rows(faults)
+        bind_rows(faults) %>% 
+        write_csv(paste0("~/R/projects/m50-perf-ind/data/jt/", substr(url, 56, 65), ".csv"), append = TRUE)
     
-    return(times_df)
+    # Add a 3 second sleep to avoid timeout
+    Sys.sleep(3)
 }
 
-sites_xml <- read_xml(paste(ttDir, "site_locations.xml", sep = "")) %>% 
-    xml_ns_strip()
-
-sites <- sites_xml %>% 
-    xml_find_all("//measurementSiteRecord")
-
-
-
-# Parse sites xml to dataframe
-sites_df <- data_frame(nodeset = sites) %>% 
-    mutate(site_ref = nodeset %>% map(~ xml_attrs(.)),
-           site_desc = nodeset %>% 
-               xml_find_all("//measurementSiteName") %>% 
-               xml_text(.),
-           values = nodeset %>% 
-               xml_find_all("//measurementSiteLocation"),
-           from = values %>% 
-               xml_find_all(".//from"),
-           to = values %>% 
-               xml_find_all(".//to"),
-           from_lat = from %>% 
-               xml_find_all(".//latitude") %>% 
-               xml_double(.),
-           from_long = from %>% 
-               xml_find_all(".//longitude") %>% 
-               xml_double(.),
-           to_lat = to %>% 
-               xml_find_all(".//latitude") %>% 
-               xml_double(.),
-           to_long = to %>% 
-               xml_find_all(".//longitude") %>% 
-               xml_double(.)) %>% 
-    select(-nodeset, -values, -from, -to) %>% 
+sites <- table %>% 
+    mutate(files = map(site, to_df)) %>% 
     unnest() %>% 
-    select(site_ref, site_desc, from_lat, from_long, to_lat, to_long)
+    mutate(url = paste0(site, X3)) %>% 
+    select(url)
 
+sites$url %>% 
+    map(extract_times)
