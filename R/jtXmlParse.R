@@ -2,81 +2,15 @@ library(tidyverse)
 library(stringr)
 library(xml2)
 
-
-
-ttDir <- "~/datastore/TravelTimes/2017-03-19/"
+ttDir <- "~/datastore/TravelTimes/"
 
 all_files <- list.files(pattern = "Content", path = ttDir, full.names = TRUE)
-
-extract_times <- function(file) {
-    times_xml <- read_xml(all_files[13]) %>% 
-        xml_ns_strip()
-    
-    times <- times_xml %>% 
-        xml_find_all("//siteMeasurements")
-    
-    # Parse content xml to dataframe (sites with "faults" removed)
-    times_df <- data_frame(nodeset = times) %>% 
-        mutate(datetime = nodeset %>% 
-                   xml_find_all("//measurementTimeDefault") %>% 
-                   xml_text(.),
-               site_desc = nodeset %>% 
-                   xml_find_all("//measurementSiteReference") %>% 
-                   xml_text(.),
-               values = nodeset %>% 
-                   xml_find_all("//measuredValue"),
-               period_secs = values %>% 
-                   xml_find_all(".//period") %>% 
-                   xml_text(.),
-               ff_speed = values %>% 
-                   xml_find_all(".//freeFlowSpeed") %>% 
-                   xml_text(.),
-               ff_trav_time = values %>% 
-                   xml_find_all(".//freeFlowTravelTime") %>% 
-                   xml_text(.)) %>% 
-        filter(!grepl("fault", values)) %>% # remove faults
-        mutate(trav_time = values %>% 
-                   xml_find_all(".//travelTime") %>% 
-                   xml_text(.)) %>% 
-        select(-nodeset, -values)
-    
-    # Parse content xml to dataframe (sites with "faults" included)
-    faults <- data_frame(nodeset = times) %>% 
-        mutate(datetime = nodeset %>% 
-                   xml_find_all("//measurementTimeDefault") %>% 
-                   xml_text(.),
-               site_desc = nodeset %>% 
-                   xml_find_all("//measurementSiteReference") %>% 
-                   xml_text(.),
-               values = nodeset %>% 
-                   xml_find_all("//measuredValue"),
-               period_secs = values %>% 
-                   xml_find_all("//period") %>% 
-                   xml_text(.),
-               ff_speed = values %>% 
-                   xml_find_all("//freeFlowSpeed") %>% 
-                   xml_text(.),
-               ff_trav_time = values %>% 
-                   xml_find_all("//freeFlowTravelTime") %>% 
-                   xml_text(.)) %>% 
-        filter(grepl("fault", values)) %>% 
-        mutate(trav_time = NA) %>% 
-        select(-nodeset, -values)
-    
-    # Combine recorded travel times with faults (as NA travel time values)
-    times_df <- times_df %>% 
-        bind_rows(faults)
-    
-    return(times_df)
-}
 
 sites_xml <- read_xml(paste(ttDir, "site_locations.xml", sep = "")) %>% 
     xml_ns_strip()
 
 sites <- sites_xml %>% 
     xml_find_all("//measurementSiteRecord")
-
-
 
 # Parse sites xml to dataframe
 sites_df <- data_frame(nodeset = sites) %>% 
@@ -106,3 +40,4 @@ sites_df <- data_frame(nodeset = sites) %>%
     unnest() %>% 
     select(site_ref, site_desc, from_lat, from_long, to_lat, to_long)
 
+write_csv(sites_df, "data/jt/sites.csv")
