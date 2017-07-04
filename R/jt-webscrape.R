@@ -23,9 +23,6 @@ to_df <- function(site) {
         as_data_frame() %>% 
         filter(!grepl("Metadata", X3))
     
-    # Add a 3 second sleep to avoid timeout
-    Sys.sleep(3)
-    
     return(df)
 }    
 
@@ -99,5 +96,5 @@ sites <- table %>%
     mutate(url = paste0(site, X3)) %>% 
     select(url)
 
-sites$url %>% 
+sites[41237:44068,]$url %>% 
     map(extract_times)
