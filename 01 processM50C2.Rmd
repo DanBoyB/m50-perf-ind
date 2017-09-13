@@ -1,19 +1,18 @@
 ---
 title: "Processing M50 C2 data"
 author: "Dan Brennan"
-date: "8 February 2017"
+date: "14 August 2017"
 output: github_document
 ---
 
-This note outlines the process and code used to read the M50 PVR data into a database and output aggregated tables and calculation of performance indicators.
+This note outlines the process and code used to read the M50 PVR data and output aggregated tables and calculation of performance indicators.
 
 ```{r setup, message = FALSE, warning = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-library(dplyr)
-library(tidyr)
-library(readr)
+library(tidyverse)
 library(lubridate)
 library(knitr)
+library(aws.s3)
 
 ```
 
@@ -24,14 +23,18 @@ Initially global variables are defined including the path to the location where 
 A connection is then opened to the SQLite database to store both the raw PVR records and the aggregated tables (change create = FALSE once database is created).
 
 ```{r}
-path <- "/var/datastore/"
+data_dir <- "~/datastore/"
+analysis_dir <- "~/R/projects/m50-perf-ind/"
 year <- 2015
 route <- 50
-siteNo <- c(1501, 1502, 1503, 1504, 1505, 1506, 1507, 
+site_no <- c(1501, 1502, 1503, 1504, 1505, 1506, 1507, 
               1508, 1509, 15010, 15011, 15012)
 
-#db <- src_sqlite(paste(path, "/SQLite/M50.sqlite", sep = ""), create = TRUE)
-db <- src_sqlite(paste(path, "/SQLite/M50.sqlite", sep = ""), create = FALSE)
+names <- c("siteID", "RecTime", "SubSec", "Flownum", "Direction", 
+             "Speed", "Class", "Headway", "Gap", "Length", "GrossWeight", 
+             "NumAxles", "ESAL", "Axles", "Weather", "VehicleId", 
+             "ClassScheme", "Flag", "BSEQ", "Code", "LegalStatus", 
+             "Validity", "ANPRConfidence", "ImagesPresent", "siteID2", "routeNo")
 ```
 
 ### Define Functions
@@ -41,147 +44,195 @@ db <- src_sqlite(paste(path, "/SQLite/M50.sqlite", sep = ""), create = FALSE)
 This is used to split data into monthly subsets in database and filter dates in SQLite before loading into memory for aggregation using R.
 
 ```{r}
-createUnixCal <- function(y) {
-  unixCal <- tibble(year = rep(y, 12), month = formatC(1:12, width = 2, flag = "0"), 
+create_unix_cal <- function(y) {
+  unix_cal <- tibble(year = rep(y, 12), month = formatC(1:12, width = 2, flag = "0"), 
                     days = 0, start = 0, end = 0) %>%
   mutate(days = as.character(days_in_month(as.POSIXct(paste(year, month, "01", sep = "-"), 
                                                       format = "%Y-%m-%d"))),
          start = as.POSIXct(paste(year, "-", month, "-", "01", " 00:00:00", sep = "")),
          end = as.POSIXct(paste(year, "-", month, "-", days, " 23:59:59", sep = "")),
-         startUnix = unclass(start),
-         endUnix = unclass(end))
+         start_unix = unclass(start),
+         end_unix = unclass(end))
 
-unixCal <- unixCal %>% 
-  select(startUnix, endUnix, month)
+unix_cal <- unix_cal %>% 
+  select(start_unix, end_unix, month)
 
 }
 
-unix2015 <- createUnixCal(2015)
+unix_df <- create_unix_cal(year)
 
 ```
 
-2. Read PVR flat files into SQLite database
+2. Read PVR flat files and output monthly csv files
 
-The PVR files for the M50 in 2015 were downloaded from Amazon S3 and temporarily saved to C:/C2 PVR/2015/route-50.
+The PVR files for the M50 in 2014 are stored in the Amazon S3 "ie-tii-data-internal/pvrs/".
 
-The PVR records are split into 4 flat text files per site. Due to data size, this process is set up to perform ETL procedures on each site and each month over a year. If all sites were processed together, the subsequent aggregation functions would require more memory.
+The PVR records are split into 4 flat text files per site. Due to data size, if all sites were processed together, the subsequent aggregation functions would require more memory.
 
-A function is created to point to the above filepath, read in the flat files into memory, loop through each month, apply column names and output to the M50.sqlite database. 
+A function is created to point to the s3 object, read in the flat files into memory, loop through each month and output to monthly csv files. If a full month of data is missing at a site, the process will skip this and return a message.
 
 ```{r}
-pvr2SQLite <- function(direct, year, routeNo, siteNo) {
-    
-    setwd(paste(direct, year, "/route-", routeNo, "/site-", siteNo, sep = ""))
+pvr_to_monthly <- function(year, route, site_no) {
     
     files <- c("0000_part_00", "0001_part_00", "0002_part_00", "0003_part_00")
     
-    names <- c("siteID", "RecTime", "SubSec", "Flownum", "Direction", 
-               "Speed", "Class", "Headway", "Gap", "Length", "GrossWeight", 
-               "NumAxles", "ESAL", "Axles", "Weather", "VehicleId", 
-               "ClassScheme", "Flag", "BSEQ", "Code", "LegalStatus", 
-               "Validity", "ANPRConfidence", "ImagesPresent", "siteID2", "routeNo")
-    
-    lapply(files, function(i) by(unix2015, 1:nrow(unix2015), function(row) {
+    lapply(files, function(i) by(unix_df, 1:nrow(unix_df), function(row) {
+        a <- s3read_using(FUN = read_tsv, 
+                          col_names = names, 
+                          object = paste0("s3://ie-tii-data-internal/pvrs/", 
+                                          year, "/route-", 
+                                          route, "/site-",                                          
+                                          site_no, 
+                                          "/", 
+                                          i)) %>% 
+            filter(RecTime >= row[[1]] & RecTime <= row[[2]])
         
-        a <- read_tsv(i, col_names = names) %>%
-          filter(RecTime >= row[1] & RecTime <= row[2]) %>% 
-          db_insert_into(con = db$con, 
-                         table = paste("pvr", routeNo, siteNo, row[3], year, sep = "_"), 
-                         values = .)
-
+        if (nrow(a) == 0) {
+            message(paste("No data available at site", 
+                          site_no,
+                          "for",
+                          month(as.POSIXct(row[[1]], origin = "1970-01-01"),
+                                label = TRUE, abbr = FALSE), 
+                          year, 
+                          "\n", 
+                          sep = " "))
+            Sys.sleep(2)
+            return (NULL)
+            } 
+        
+        else {
+            a %>% 
+                write_csv(paste(analysis_dir, 
+                                paste0("output/pvr/", "pvr-", route, "-", 
+                                       site_no, "-", row[3], "-", year), 
+                                ".csv", 
+                                sep = ""),
+                    append = TRUE)
+        }
+          
         rm(a)
-        gc() }))
+        gc(verbose = FALSE) }))
     
 }
 ```
 
 3. Data Aggregation
 
-A function to aggregate data into the required periods is developed. This loops through the SQLite database for each site and each month, reads into memory, groups into the period selected, defines new columns and outputs to new SQLite table. 
+A function to aggregate data into the required periods is developed. This loops through the csv files for each site and each month, reads into memory, groups into the period selected, defines new columns and outputs to a new aggregated csv file. 
 
 
 ```{r}
-aggregatePvr <- function(database, siteNo, routeNo, year, 
+aggregate_pvr <- function(site_no, route, year, 
                          aggregation = c("day", "hour", "min15", "min5"), 
                          month) {
+    
   
   secs <- ifelse(aggregation == "day", 86400,
        ifelse(aggregation == "hour", 3600,
        ifelse(aggregation == "min15", 900,
        ifelse(aggregation == "min5", 300, NA))))
   
-  etl <- function(x) {
-    s <- tbl(database, 
-             paste("pvr", routeNo, siteNo, month, year, sep = "_")) %>% 
-      arrange(RecTime) %>% 
-      collect(n = Inf) %>%
-      select(siteID2, routeNo, RecTime, Code, Direction, 
-             Speed, Class, Length) %>% 
-      rename(siteID = siteID2) %>% 
-      mutate(time = trunc(RecTime / secs) * secs,
-             Speed = (Speed / 1000) * 3.6) %>%
-      group_by(siteID, time, Class, Code) %>%
-      summarise(volume = n(), speed = mean(Speed)) %>% 
-      ungroup() %>% 
-      db_insert_into(con = db$con, 
-                     table = paste(aggregation, route, year, sep = "_"), 
-                     values = .)
-    
-    rm(s)
-    gc()
+  file_name <- paste(analysis_dir, paste("output/pvr", 
+                                    route, site_no, month, year, sep = "_"), 
+                    ".csv", sep = "")
+  
+  if (!file.exists(file_name)) {
+      return (NULL)
+      }
+  
+  else {
+      s <- read_csv(file_name, col_names = names) %>% 
+          arrange(RecTime) %>% 
+          select(siteID2, routeNo, RecTime, Code, Direction, 
+                 Speed, Class, Length) %>%     
+          rename(siteID = siteID2) %>% 
+          mutate(time = trunc(as.numeric(RecTime) / secs) * secs,
+                 Speed = (Speed / 1000) * 3.6) %>%
+          group_by(siteID, time, Class, Code) %>%
+          summarise(volume = n(), speed = mean(Speed)) %>% 
+          ungroup() %>% 
+          write_csv(paste(analysis_dir, paste("output/aggr/", 
+                                              aggregation, route, year, sep = "_"),
+                          ".csv", sep = ""),
+                    append = TRUE)
+      }
+  
+  rm(s)
+  gc(verbose = FALSE)
+  
   }
-
-  lapply(month, etl)
-}
 
 ```
 
-### Load PVR files into SQLite Database
+### Load PVR files and output as monthly csv files
 
-The pvr2SQLite function is used to loop through all M50 sites and load the PVR records into the SQLite database as seperate tables for each site and each month of 2015. This process takes 4-5 hours when used for all sites on the M50 over a year.
+The pvr_to_monthly function is used to loop through all M50 sites and outpuy the PVR records as seperate csv files for each site and each month of 2014. This process takes approx 30 mins when used for all sites on the M50 over a year.
 
 
 ```{r, eval = FALSE}
 
-lapply(siteNo, pvr2SQLite, direct = path, year = year, route = 50)
+site_no %>%
+    map(pvr_to_monthly, year = year, route = 50)
 
 ```
-
-The flat files for each site on the M50 in 2015 total range from 3.0 - 5.5 GB per site with all sites totalling 51.3 GB in size. The SQLite database with just the tables of 2015 PVR raw data is approx 39.3 GB in size.
 
 A summary of the structure of a database PVR table is shown below.
 
 ```{r}
-glimpse(tbl(db, "pvr_50_1501_01_2015"))
+glimpse(read_csv(paste(analysis_dir, "output/pvr_40_1258_01_2015.csv", sep = ""),
+                 col_names = names))
 ```
 
 
 ### Output aggregated tables
 
-The aggregatePVR function is used to produce the required aggregated tables for daily, hourly, 15 minute and 5 minute intervals. 
+The aggregate_pvr function is used to produce the required aggregated tables for daily, hourly, 15 minute and 5 minute intervals. 
 
 ```{r, eval = FALSE}
 lapply(siteNo, function(x) {
 #daily
-lapply(unix2015$month, aggregatePvr, 
-       database = db, siteNo = x, route = route, year = year, aggregation = "day")
+lapply(unix_df$month, aggregate_pvr, 
+       site_no = x, route = route, year = year, aggregation = "day")
 #hourly
-lapply(unix2015$month, aggregatePvr, 
-       database = db, siteNo = x, route = route, year = year, aggregation = "hour")
+lapply(unix_df$month, aggregate_pvr, 
+       site_no = x, route = route, year = year, aggregation = "hour")
 #15 min
-lapply(unix2015$month, aggregatePvr, 
-       database = db, siteNo = x, route = route, year = year, aggregation = "min15")
+lapply(unix_df$month, aggregate_pvr, 
+       site_no = x, route = route, year = year, aggregation = "min15")
 #5 min
-lapply(unix2015$month, aggregatePvr, 
-       database = db, siteNo = x, route = route, year = year, aggregation = "min5")
+lapply(unix_df$month, aggregate_pvr, 
+       site_no = x, route = route, year = year, aggregation = "min5")
 })
 ```
+
+Column names are added to the csv files.
+
+```{r}
+aggregation <- c("day", "hour", "min15", "min5")
+
+aggregation %>% 
+    map(function(x) {
+
+    file_name <- paste(analysis_dir, "output/", x, "_40_2015.csv", sep = "")
+                    
+    if (!file.exists(file_name)) {
+        return (NULL)
+    }
+    
+    else {
+        read_csv(file_name, col_names = c("siteID", "time", "Class", "Code", "volume", "speed")) %>% 
+            write_csv(file_name)    
+    }
+    
+    })
+```
+
 
 As a check, the output daily aggregated traffic data was examined for site 1012
 
 ```{r}
-hourly <- tbl(db, "hour_50_2015") %>% 
-  filter(siteID == 1501) %>% 
+hourly <- read_csv(paste(analyDir, "output/hourly_50_2014.csv", sep = "")) %>% 
+  filter(siteID == 1012) %>% 
   collect(n = Inf) %>% 
   mutate(time = as.POSIXct(time, origin = "1970-01-01")) %>% 
   arrange(time) %>% 
@@ -219,15 +270,7 @@ classes <- data_frame(Class = 1:7) %>%
                 ifelse(Class == 7, "caravan", NA))))))))
 
 classes %>% 
-   db_insert_into(con = db$con, table = "classes", values = .)
+   write_csv(paste(analysis_dir, "output/classes.csv", sep = ""))
 ```
 
-Create a reference table for lane numbers
-
-No lookup table available for all sites. Data gathered on M50 from sample of C2 PVR records.
-
-```{r, eval = FALSE}
-read_csv("data/m50laneNum.csv") %>% 
-  db_insert_into(con = db$con, table = "m50laneNum", values = .)
-```
 
